@@ -5,12 +5,33 @@ using System.Linq;
 using System.Xml.Linq;
 using System.Text;
 using System.Threading.Tasks;
+using System.Data.Entity;
+using System.Linq.Expressions;
 
 namespace Cars {
     class Program {
         static void Main(string[] args) {
-            CreateXml();
-            QueryXml();
+
+            //
+
+            //Func<int, int> square = x => x * x;
+            //Expression<Func<int, int, int>> add = (x, y) => x + y;
+            //Func<int, int, int> addI = add.Compile();
+
+            //var result = addI(3, 5);
+            //Console.WriteLine(result);
+            //Console.WriteLine(add);
+
+            //
+
+
+            Database.SetInitializer(new DropCreateDatabaseIfModelChanges<CarDb>());
+            InsertData();
+            QueryData();
+
+
+            //CreateXml();
+            //QueryXml();
 
             //foreach (var record in records) {
 
@@ -259,6 +280,89 @@ namespace Cars {
             //Console.ReadLine();
         }
 
+        private static void QueryData() {
+            var db = new CarDb();
+            db.Database.Log = Console.WriteLine;
+
+
+            var query =
+                from car in db.Cars
+                group car by car.Manufacturer into manufacturer
+                select new {
+                    Name = manufacturer.Key,
+                    Cars = (from car in manufacturer
+                            orderby car.Combined descending
+                            select car)
+                            .Take(2)
+                };
+
+
+
+            //var query =
+            //    from car in db.Cars
+            //    group car by car.Manufacturer into manufacturer
+            //    select new {
+            //        Name = manufacturer.Key,
+            //        Cars = manufacturer.OrderByDescending(c => c.Combined).Take(2)
+            //    };
+
+
+
+            //var query = db.Cars
+            //    .GroupBy(c => c.Manufacturer)
+            //    .Select(g => new {
+            //        Name = g.Key,
+            //        Cars = g.OrderByDescending(c => c.Combined).Take(2)
+            //    });
+
+            foreach (var group in query) {
+                Console.WriteLine(group.Name);
+                foreach (var car in group.Cars) {
+                    Console.WriteLine($"\t{car.Name} : {car.Combined}");
+                }
+            }
+
+
+
+            //var query =
+            //    from car in db.Cars
+            //    orderby car.Combined descending, car.Name ascending
+            //    select car;
+
+            //var query = db.Cars
+            //    .Where(c => c.Manufacturer == "BMW")
+            //    .OrderByDescending(c => c.Combined)
+            //    .ThenBy(c => c.Name)
+            //    .Take(10)
+            //    .ToList();
+            //.Select(c => new { Name = c.Name.Split(' ') }); // not supported by entity framework
+
+
+            //foreach (var item in query) {
+            //    Console.WriteLine(item.Name);
+            //}
+
+            //Console.WriteLine(query.Count());
+
+            //foreach (var car in query) {
+            //    Console.WriteLine($"{car.Name} : {car.Combined}");
+            //}
+        }
+
+        private static void InsertData() {
+            var cars = ProcessFile("fuEl.csv");
+            var db = new CarDb();
+
+            if (!db.Cars.Any()) {
+
+                foreach (var car in cars) {
+                    db.Cars.Add(car);
+                }
+                db.SaveChanges();
+            }
+
+        }
+
         private static void QueryXml() {
 
             var ns = (XNamespace)"htttp://pluralsight.com/cars/2016";
@@ -279,7 +383,7 @@ namespace Cars {
         private static void CreateXml() {
             var records = ProcessFile("fuel.csv");
 
-            var ns = (XNamespace) "htttp://pluralsight.com/cars/2016";
+            var ns = (XNamespace)"htttp://pluralsight.com/cars/2016";
             var ex = (XNamespace)"htttp://pluralsight.com/cars/2016/ex";
             var document = new XDocument();
             var cars = new XElement(ns + "Cars",
