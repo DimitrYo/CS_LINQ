@@ -2,31 +2,50 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using System.Xml.Linq;
 using System.Text;
 using System.Threading.Tasks;
 
 namespace Cars {
     class Program {
         static void Main(string[] args) {
-            var cars = ProcessFile("fuel.csv");
-            var manufacturers = ProccessManufacturers("manufacturers.csv");
+            CreateXml();
+            QueryXml();
+
+            //foreach (var record in records) {
+
+            //    var car = new XElement("Car",
+            //        new XAttribute("Name", record.Name),
+            //        new XAttribute("Combined", record.Combined),
+            //        new XAttribute("Manufacturer",record.Manufacturer)
+            //        );
+
+            //    cars.Add(car);
+            //}
+
+            //document.Add(cars);
+            //document.Save("fuel.xml");
 
 
-            var query6 =
-                cars.GroupBy(c => c.Manufacturer)
-                .Select(g => {
-                    var results = g.Aggregate(new CarStatistics(),
-                         (acc, c) => acc.Accumulate(c),
-                         acc => acc.Compute());
+            //var cars = ProcessFile("fuel.csv");
+            //var manufacturers = ProccessManufacturers("manufacturers.csv");
 
-                    return new {
-                        Name = g.Key,
-                        Avg = results.Average,
-                        Min = results.Min,
-                        Max = results.Max
-                    };
-                })
-                .OrderByDescending(r => r.Max);
+
+            //var query6 =
+            //    cars.GroupBy(c => c.Manufacturer)
+            //    .Select(g => {
+            //        var results = g.Aggregate(new CarStatistics(),
+            //             (acc, c) => acc.Accumulate(c),
+            //             acc => acc.Compute());
+
+            //        return new {
+            //            Name = g.Key,
+            //            Avg = results.Average,
+            //            Min = results.Min,
+            //            Max = results.Max
+            //        };
+            //    })
+            //    .OrderByDescending(r => r.Max);
 
 
 
@@ -42,12 +61,12 @@ namespace Cars {
             //    orderby result.Max descending
             //    select result;
 
-            foreach (var result in query6) {
-                Console.WriteLine($"{result.Name}");
-                Console.WriteLine($"\t Max: {result.Max}");
-                Console.WriteLine($"\t Min: {result.Min}");
-                Console.WriteLine($"\t Avg: {result.Avg}");
-            }
+            //foreach (var result in query6) {
+            //    Console.WriteLine($"{result.Name}");
+            //    Console.WriteLine($"\t Max: {result.Max}");
+            //    Console.WriteLine($"\t Min: {result.Min}");
+            //    Console.WriteLine($"\t Avg: {result.Avg}");
+            //}
 
 
 
@@ -238,6 +257,42 @@ namespace Cars {
             //    Console.WriteLine($"{car.Manufacturer.Headquarters} {car.Car.Name} : {car.Car.Combined}");
             //}
             //Console.ReadLine();
+        }
+
+        private static void QueryXml() {
+
+            var ns = (XNamespace)"htttp://pluralsight.com/cars/2016";
+            var ex = (XNamespace)"htttp://pluralsight.com/cars/2016/ex";
+
+            var document = XDocument.Load("fuel.xml");
+            var query =
+                from element in document.Element(ns + "Cars")?.Elements(ex + "Car") ?? Enumerable.Empty<XElement>()
+                where element.Attribute("Manufacturer")?.Value == "BMW"
+                select element.Attribute("Name").Value;
+
+            foreach (var name in query) {
+                Console.WriteLine(name);
+            }
+
+        }
+
+        private static void CreateXml() {
+            var records = ProcessFile("fuel.csv");
+
+            var ns = (XNamespace) "htttp://pluralsight.com/cars/2016";
+            var ex = (XNamespace)"htttp://pluralsight.com/cars/2016/ex";
+            var document = new XDocument();
+            var cars = new XElement(ns + "Cars",
+                from record in records
+                select new XElement(ex + "Car",
+                    new XAttribute("Name", record.Name),
+                    new XAttribute("Combined", record.Combined),
+                    new XAttribute("Manufacturer", record.Manufacturer)
+                    ));
+
+            cars.Add(new XAttribute(XNamespace.Xmlns + "ex", ex));
+            document.Add(cars);
+            document.Save("fuel.xml");
         }
 
         private static List<Car> ProcessFile(string path) {
